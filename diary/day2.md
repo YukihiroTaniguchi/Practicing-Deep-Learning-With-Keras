@@ -1,5 +1,5 @@
 ### 181121(Wen)  
-p.28 - p.31  
+p.28 - p.46  
 chapter2.py : L1-L211
 ##### *Remember me*  
 MNIST(Mixed National Institute of Standards and Technology)

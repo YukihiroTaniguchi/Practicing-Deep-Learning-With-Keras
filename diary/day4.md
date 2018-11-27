@@ -44,3 +44,35 @@ history_dict.keys()
 ネットワークの出力は、確率を表す0 ~ 1 のスカラー値になる  
 出力がシグモイドのスカラー値である場合には、損失関数としてbinary_crossentropyを使用すべきである  
 rmspropオプティマイザはどの問題でも十分に良い選択となる
+
+他クラス単一ラベル分類
+
+多いラベルのベクトル化  
+-> one-hot エンコーディング  
+-> カテゴリエンコーディングともいう
+
+```python
+def to_one_hot(labels, dimension=46):
+    results = np.zeros((len(labels), dimension))
+    for i, label in enumerate(labels):
+        results[i, label] = 1.
+    return results
+
+one_hot_train_labels = to_one_hot(train_labels)
+one_hot_train_labels = to_one_hot(train_labels)
+#ラベルのインデックスの位置に1が含まれている以外はすべて0が設定されたベクトルにする
+###################################################################################
+from keras.utils.np_utils import to_categorical
+
+one_hot_train_labels = to_categorical(train_labels)
+one_hot_train_labels = to_categorical(test_labels)
+#上のkeras組み込み関数で同じことができる
+```
+
+他クラス単一ラベル分類  
+出力はクラス数だけある  
+確率分布  
+46クラスの場合、46次元の出力ベクトルをsoftmaxで生成し、合計は1となる  
+->categorical_crossentropyが最適  
+->確率分布とラベルの真の分布との距離になる  
+->これを最小化する

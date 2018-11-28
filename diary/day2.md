@@ -1,4 +1,4 @@
-### 181121(Wen)  
+### 181121(Wed)  
 p.28 - p.46  
 chapter2.py : L1-L211
 ##### *Remember me*  

@@ -1,6 +1,6 @@
 ### 181127(Tue)  
-p.65 - p.78  
-chapter3.py : L32-L133
+p.65 - p.83  
+chapter3.py : L32-L226
 ##### *Remember me*  
 IMDbデータセット  
 訓練用25000 : テスト用25000  

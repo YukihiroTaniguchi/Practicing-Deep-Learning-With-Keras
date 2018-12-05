@@ -1,6 +1,6 @@
 ### 181204(Tue)  
-p.151 - p. 154
-chapter5.py : L267-L311
+p.151 - p. 158
+chapter5.py : L267-L406
 ##### *Remember me*  
 学習済みのCNNを使用する
 VGG16のインスタンス化
@@ -49,7 +49,7 @@ validation_features, validation_labels = extract_features(validation_dir, 1000)
 test_features, test_labels = extract_features(test_dir, 1000)
 ```
 
-データ拡張を行わない高速な特徴抽出
+データ拡張を行わない高速な特徴抽出  
 -> 学習済みのデータから抽出した学習済みの特徴量を全結合層に投入
 ```python
 from keras import models

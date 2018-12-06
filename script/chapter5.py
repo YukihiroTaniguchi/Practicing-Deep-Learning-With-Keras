@@ -486,6 +486,8 @@ test_generator = test_datagen.flow_from_directory(
 test_loss, test_acc = model.evaluate_generator(test_generator, steps=50)
 print('test acc:', test_acc)
 
+
+#5.4.1 中間層の出力を可視化する
 pwd
 cats_and_dogs_small_2_h5 =\
  '/Users/yukihiro/Documents/Practicing-Deep-Learning-With-Keras/others/cats_and_dogs_small_2.h5'
@@ -493,3 +495,81 @@ cats_and_dogs_small_2_h5 =\
 from keras.models import load_model
 cats_and_dogs_small_2_h5
 model = load_model(cats_and_dogs_small_2_h5)
+
+model.summary()
+
+pwd
+img_path = \
+    '/Users/yukihiro/Documents/Practicing-Deep-Learning-With-Keras/data/cats_and_dogs_small/test/cats/cat.1700.jpg'
+
+from keras.preprocessing import image
+import numpy as np
+
+img = image.load_img(img_path, target_size=(150, 150))
+img_tensor = image.img_to_array(img)
+img_tensor = np.expand_dims(img_tensor, axis=0)
+
+img_tensor /= 255.
+print(img_tensor.shape)
+
+import matplotlib.pyplot as plt
+plt.imshow(img_tensor[0])
+
+from keras import models
+layer_outputs = [layer.output for layer in model.layers[:8]]
+
+activation_model = models.Model(inputs=model.input, outputs=layer_outputs)
+activations = activation_model.predict(img_tensor)
+activations[0].shape[1]
+first_layer_activation = activations[0]
+first_layer_activation.shape
+activations[1].shape
+activations[2].shape
+activations[3].shape
+activations[4].shape
+activations[5].shape
+activations[6].shape
+activations[7].shape
+
+import matplotlib.pyplot as plt
+plt.matshow(first_layer_activation[0, :, :, 30], cmap='viridis')
+
+layer_names = []
+for layer in model.layers[:8]:
+    layer_names.append(layer.name)
+
+images_per_row = 16
+
+for layer_name, layer_activation in  zip(layer_names, activations):
+    #特徴マップに含まれる特徴量の数(チャネル数)
+    n_features = layer_activation.shape[-1]
+
+    #特徴マップの形状(1, size, size, n_features)
+    size = layer_activation.shape[1]
+
+    #この行列で活性化のチャネルをタイル表示
+    n_cols = n_features // images_per_row
+    display_grid = np.zeros((size * n_cols, images_per_row * size))
+
+    #各フィルタを1つの大きな水平グリッドでタイル表示
+    for col in range(n_cols):
+        for row in range(images_per_row):
+            channel_image = layer_activation[0, :, :,
+                                             col * images_per_row + row]
+
+            # 特徴量の見た目を良くするための後処理
+            channel_image -= channel_image.mean()
+            channel_image /= channel_image.std()
+            channel_image *= 64
+            channel_image += 128
+            channel_image = np.clip(channel_image, 0, 255).astype('uint8')
+            display_grid[col * size : (col + 1) * size,
+                         row * size : (row + 1) * size] = channel_image
+
+    scale = 1. / size
+    plt.figure(figsize=(scale * display_grid.shape[1],
+                        scale * display_grid.shape[0]))
+    plt.title(layer_name)
+    plt.grid(False)
+    plt.imshow(display_grid, aspect='auto', cmap='viridis')
+    

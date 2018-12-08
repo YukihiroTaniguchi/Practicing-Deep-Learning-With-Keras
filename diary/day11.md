@@ -4,9 +4,9 @@ chapter5.py : L576-L688
 ##### *Remember me*  
 CNNのフィルタを可視化する
 
-勾配上昇法
-->空の入力から始めて、
-->CNNの入力画像の値に勾配降下法を適用することで、
+勾配上昇法  
+->空の入力から始めて、  
+->CNNの入力画像の値に勾配降下法を適用することで、  
 ->特定のフィルタの応答を可視化する
 
 ```python
@@ -131,4 +131,3 @@ for layer_name in layers:
     plt.imshow(results)
 
 ```
-上の関数でもdeprocess_image(x)使わないとだめなのでは？

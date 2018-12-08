@@ -2,7 +2,7 @@
 p.151 - p. 158
 chapter5.py : L267-L406
 ##### *Remember me*  
-学習済みのCNNを使用する
+学習済みのCNNを使用する  
 VGG16のインスタンス化
 ```python
 from keras.applications import VGG16

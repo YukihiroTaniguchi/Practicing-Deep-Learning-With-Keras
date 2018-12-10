@@ -134,6 +134,7 @@ batch_size = 20
 
 def extract_features(directory, sample_count):
     features = np.zeros(shape=(sample_count, 4, 4, 512))
+    #block5_pool層(最後の層)は形状が3 (4, 4, 512)
     labels = np.zeros(shape=(sample_count))
     generator = datagen.flow_from_directory(directory,
                                             target_size=(150, 150),
@@ -294,7 +295,7 @@ print(img_tensor.shape)
 sequential モデル  
 -> 入力数: 1, 出力数: 1
 
-keras モデル  
+Model クラス
 -> 入力数: 制限なし, 出力数: 制限なし
 
 一つの画像を入力し、複数の層における出力をはきだす
@@ -303,7 +304,9 @@ from keras import models
 layer_outputs = [layer.output for layer in model.layers[:8]]
 #学習済みのモデルの0-8の層の出力
 
-activation_model = models.model(inputs=model.input, outputs=layer_outputs)
+#特定の入力をもとに、これらの出力を返すモデルを作成
+activation_model = models.Model(inputs=model.input, outputs=layer_outputs)
+
 activations = activation_model.predict(img_tensor)
 activations[0].shape[1]#148
 first_layer_activation = activations[0]

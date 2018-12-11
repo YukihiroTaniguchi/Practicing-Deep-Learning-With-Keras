@@ -127,3 +127,48 @@ x_train
 
 
 x_test = preprocessing.sequence.pad_sequences(x_test, maxlen=max_len)
+
+from keras.models import Sequential
+from keras.layers import Flatten, Dense, Embedding
+
+model = Sequential()
+
+#あとから埋め込み入力を平坦化できるよう、
+#Embedding層に入力の長さとしてmax_lenを指定
+#Embedding層のあと、活性化の形状は(samples, max_len, 8)になる
+model.add(Embedding(10000, 8, input_length=max_len))
+
+model.add(Flatten())
+
+model.add(Dense(1, activation='sigmoid'))
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+model.summary()
+
+history = model.fit(x_train, y_train,
+                    epochs=10,
+                    batch_size=32,
+                    validation_split=0.2)
+
+import os
+
+# IMDb データセットが置かれているディレクトリ
+pwd
+imdb_dir = '/Users/yukihiro/Documents/Practicing-Deep-Learning-With-Keras/data/aclImdb'
+train_dir = os.path.join(imdb_dir, 'train')
+labels = []
+texts = []
+
+for label_type in ['neg', 'pos']:
+    dir_name = os.path.join(train_dir, label_type)
+    for fname in os.listdir(dir_name):
+        if fname[-4:] == '.txt':
+            f = open(os.path.join(dir_name, fname))
+            texts.append(f.read())
+            f.close()
+
+    if label_type == 'neg':
+        labels.append(0)
+    else:
+        labels.append(1)

@@ -9,4 +9,4 @@ Hydrogen : 2.6.0
 
 ***
 [Deep Learning with Python
-(François Chollet)](https://www.manning.com/books/deep-learning-with-pytho)
+(François Chollet)](https://www.manning.com/books/deep-learning-with-python)

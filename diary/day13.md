@@ -1,4 +1,4 @@
-### 181210(Sun)    
+### 181210(Mon)    
 p.188 - p.196  
 chapter6.py : L1 - L129
 ##### *Remember me*  

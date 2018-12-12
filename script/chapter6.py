@@ -355,3 +355,159 @@ y_test = np.asarray(labels)
 #モデルをテストデータセットで評価
 model.load_weights('others/pre_trained_glove_model.h5')
 model.evaluate(x_test, y_test)
+
+#6.2 リカレントニューラルネットワーク
+#RNNの擬似コード
+state_t = 0                         #時間tでの状態
+for input_i in input_sequence:      #シーケンスの要素をループで処理
+    output_t = f(input_t, state_t)  #この1つ前の出力が
+    state_t = output_t              #次のイテレーションの状態になる
+
+#より詳細なRNNの疑似コード
+state_t = 0
+for input_t in input_sequence:
+    output_t = activation(dot(W, input_t) + dot(U, state_t) + b)
+    state_t = output_t
+
+#単純なNumPyによるRNNの疑似コード
+import numpy as np
+
+timesteps = 100         #入力シーケンスの timesteps の数
+input_features = 32     #入力特徴空間の次元の数
+output_features = 64   #出力特徴空間の次元の数
+
+#入力データ : ランダムにノイズを挿入
+inputs = np.random.random((timesteps, input_features))
+
+#初期状態 : すべての0のベクトル
+state_t = np.zeros((output_features))
+
+#ランダムな重み行列を作成
+W = np.random.random((output_features, input_features))
+U = np.random.random((output_features, output_features))
+b = np.random.random((output_features))
+
+successive_outputs = []
+
+#input_tは形状が(input_features, )のベクトル
+for input_t in inputs:
+    #入力と現在の状態(1つ前の出力)を結合して現在の出力を取得
+    #活性化関数tanh
+    output_t = np.tanh(np.dot(W, input_t) + np.dot(U, state_t) + b)
+    #この出力をリストに格納
+    successive_outputs.append(output_t)
+    #次の時間刻みのためにRNNの状態を更新
+    state_t = output_t
+
+#最終的な出力は形状が(timesteps, output_features)の2次元テンソル
+final_output_sequence = np.stack(successive_outputs, axis=0)
+#successive_outputsのままだと配列がいっぱい入ったリストだったが、それを全体で配列にした
+
+#6.2.1 Keras でのリカレント層
+from keras.models import Sequential
+from keras.layers import Embedding, SimpleRNN
+model = Sequential()
+model.add(Embedding(10000, 32))
+model.add(SimpleRNN(32))
+model.summary()
+
+model = Sequential()
+model.add(Embedding(10000, 32))
+model.add(SimpleRNN(32, return_sequences = True))
+model.summary()
+
+model = Sequential()
+model.add(Embedding(10000, 32))
+model.add(SimpleRNN(32, return_sequences=True))
+model.add(SimpleRNN(32, return_sequences=True))
+model.add(SimpleRNN(32, return_sequences=True))
+model.add(SimpleRNN(32))
+model.summary()
+
+#IMDbデータの前処理
+from keras.datasets import imdb
+from keras.preprocessing import sequence
+
+max_features = 10000 #特徴量として考慮する単語の数
+max_len = 500   #この数の単語を残してテキストカット
+batch_size = 32
+
+print('Loading data...')
+(input_train, y_train), (input_test, y_test) = \
+    imdb.load_data(num_words=max_features)
+
+print(len(input_train), 'train sequences')
+print(len(input_test), 'test sequences')
+
+print('Pad sequences (samples x time)')
+input_train = sequence.pad_sequences(input_train, maxlen=max_len)
+input_test = sequence.pad_sequences(input_test, maxlen=max_len)
+
+print('input_train shape:', input_train.shape)
+print('input_test shape', input_test.shape)
+
+#Embedding層 とSimpleRNN層を使ってモデルを訓練
+from keras.models import Sequential
+from keras.layers import Embedding, SimpleRNN,Dense
+
+model = Sequential()
+model.add(Embedding(max_features, 32))
+model.add(SimpleRNN(32))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+history = model.fit(input_train, y_train,
+                    epochs=10, batch_size=128, validation_split=0.2)
+
+import matplotlib.pyplot as plt
+
+acc = history.history['acc']
+val_acc = history.history['val_acc']
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+epochs = range(len(acc))
+
+plt.plot(epochs, acc, 'bo', label='Training acc')
+plt.plot(epochs, val_acc, 'b', label='Validation acc')
+plt.title('Training and validation accuracy')
+plt.legend()
+
+plt.figure()
+
+plt.plot(epochs, loss, 'bo', label='Training loss')
+plt.plot(epochs, val_acc, 'b', label='Validation loss')
+plt.title('Training an validation loss')
+plt.legend()
+
+#6.2.2 LSTM層とGRU層
+
+#LSTM アーキテクチャの擬似コード
+output_t = activation(dot(state_t, Uo) + dot(input_t, Wo)
+                                       + dot(C_t, Vo) + bo)
+
+i_t = activation(dot(state_t, Ui) + dot(input_t, Wi) + bi)
+f_t = activation(dot(state_t, Uf) + dot(input_t, Wf) + bf)
+k_t = activation(dot(state_t, Uk) + dot(input_t, Wk) + bk)
+
+#新しいキャリー状態
+c_t+1 = i_t * k_t + c_t * f_t
+
+#6.2.3 KerasでのLSTMの具体的な例
+from keras.layers import LSTM
+model = Sequential()
+model.add(Embedding(max_features, 32))
+model.add(LSTM(32))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+history = model.fit(input_train, y_train,
+                    epochs=10,
+                    batch_size=128,
+                    validation_split=0.2)

@@ -105,5 +105,4 @@ for word, i in word_index.items():
             # 埋め込みインデックスで見つからない単語は0で埋める
             # 自動的に0で埋められる
             embedding_matrix[i] = embedding_vector
-
 ```

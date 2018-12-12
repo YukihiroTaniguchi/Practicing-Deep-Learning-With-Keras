@@ -66,14 +66,14 @@ tokenizer = Tokenizer(num_words=1000)
 
 #単語にインデックスをつける
 tokenizer.fit_on_texts(samples)
-
 #文字列を整数インデックスのリストに変換
 sequences = tokenizer.texts_to_sequences(samples)
-
+sequences
 #文字列をone-hotエンコーディングすることも可能
 one_hot_results = tokenizer.texts_to_matrix(samples, mode='binary')
 one_hot_results.shape
 
+print(len(tokenizer.word_index))
 #ハッシュトリックを用いた単語レベルの単純なone-hot エンコーディング
 samples = ['The cat sat on the mat.', 'The dog ate my homework.']
 
@@ -95,7 +95,7 @@ results.shape
 
 #6.1.2 単語埋め込み
 
-埋め込み層(Embedding 層)をインスタンス化
+#埋め込み層(Embedding 層)をインスタンス化
 from keras.layers import Embedding
 
 #Embedding層の引数は少なくとも2つ:
@@ -191,7 +191,6 @@ sequences = tokenizer.texts_to_sequences(texts)
 
 word_index = tokenizer.word_index
 print('Found %s unique tokens.' % len(word_index))
-
 data = pad_sequences(sequences, maxlen=max_len)
 
 labels = np.asarray(labels)
@@ -209,7 +208,7 @@ labels = labels[indices]
 x_train = data[:training_samples]
 y_train = labels[:training_samples]
 x_val = data[training_samples: training_samples + validation_samples]
-y_val = data[training_samples: training_samples + validation_samples]
+y_val = labels[training_samples: training_samples + validation_samples]
 
 pwd
 
@@ -239,3 +238,120 @@ for word, i in word_index.items():
             # 埋め込みインデックスで見つからない単語は0で埋める
             # 自動的に0で埋められる
             embedding_matrix[i] = embedding_vector
+
+#モデルの定義
+from keras.models import Sequential
+from keras.layers import Embedding, Flatten, Dense
+
+model = Sequential()
+model.add(Embedding(max_words, embedding_dim, input_length=max_len))
+model.add(Flatten())
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.summary()
+
+#準備した単語埋め込みをEmbeddingに読み込む
+model.layers[0].set_weights([embedding_matrix])
+model.layers[0].trainable = False
+
+#コンパイル、訓練、評価
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+history = model.fit(x_train, y_train,
+                    epochs=10,
+                    batch_size=32,
+                    validation_data=(x_val, y_val))
+
+model.save_weights('pre_trained_glove_model.h5')
+
+import matplotlib.pyplot as plt
+
+acc = history.history['acc']
+val_acc = history.history['val_acc']
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+epochs = range(1, len(acc) + 1)
+
+#正解率をプロット
+plt.plot(epochs, acc, 'bo', label='Training acc')
+plt.plot(epochs, val_acc, 'b', label='Validation acc')
+plt.title('Training and validation accuracy')
+plt.legend()
+
+#損失値をプロット
+plt.figure()
+plt.plot(epochs, loss, 'bo', label='Training loss')
+plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.legend()
+
+#学習済みの単語埋め込みを使用せずに同じモデルを訓練
+from keras.models import Sequential
+from keras.layers import Embedding, Flatten, Dense
+
+model = Sequential()
+model.add(Embedding(max_words, embedding_dim, input_length=max_len))
+model.add(Flatten())
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.summary()
+
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+history = model.fit(x_train, y_train,
+                    epochs=10,
+                    batch_size=32,
+                    validation_data=(x_val, y_val))
+
+import matplotlib.pyplot as plt
+
+acc = history.history['acc']
+val_acc = history.history['val_acc']
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+epochs = range(1, len(acc) + 1)
+
+#正解率をプロット
+plt.plot(epochs, acc, 'bo', label='Training acc')
+plt.plot(epochs, val_acc, 'b', label='Validation acc')
+plt.title('Training and validation accuracy')
+plt.legend()
+
+#損失値をプロット
+plt.figure()
+plt.plot(epochs, loss, 'bo', label='Training loss')
+plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.legend()
+
+#テストデータセットのデータをトークン化
+test_dir = os.path.join(imdb_dir, 'test')
+
+labels = []
+texts = []
+
+for label_type in ['neg', 'pos']:
+    dir_name = os.path.join(test_dir, label_type)
+    for fname in sorted(os.listdir(dir_name)):
+        if fname[-4:] == '.txt':
+            f = open(os.path.join(dir_name, fname))
+            texts.append(f.read())
+            f.close()
+            if label_type == 'neg':
+                labels.append(0)
+            else:
+                labels.append(1)
+
+sequences = tokenizer.texts_to_sequences(texts)
+x_test = pad_sequences(sequences, maxlen=max_len)
+y_test = np.asarray(labels)
+
+#モデルをテストデータセットで評価
+model.load_weights('others/pre_trained_glove_model.h5')
+model.evaluate(x_test, y_test)

@@ -533,6 +533,7 @@ print(len(lines))
 print(len(header))
 print(lines[0].split(','))
 
+
 #データの解析(420551行のデータをNumPy配列に変換)
 import numpy as np
 
@@ -541,6 +542,7 @@ for i, line in enumerate(lines):
     values = [float(x) for x in line.split(',')[1:]]
     float_data[i, :] = values
 
+float_data.shape[-1]
 from matplotlib import pyplot as plt
 
 temp = float_data[:, 1] #気温(摂氏)
@@ -675,6 +677,217 @@ model = Sequential()
 model.add(layers.GRU(32, input_shape=(None, float_data.shape[-1])))
 model.add(layers.Dense(1))
 
+model.compile(optimizer=RMSprop(), loss='mae')
+history = model.fit_generator(train_gen,
+                              steps_per_epoch=500,
+                              epochs=20,
+                              validation_data=val_gen,
+                              validation_steps=val_steps)
+
+from keras.models import Sequential
+from keras import layers
+from keras.optimizers import RMSprop
+
+model = Sequential()
+model.add(layers.GRU(32,
+                     dropout=0.1,
+                     recurrent_dropout=0.5,
+                     return_sequences=True,
+                     input_shape=(None, float_data.shape[-1])))
+model.add(layers.GRU(64, activation='relu',
+                     dropout=0.1,
+                     recurrent_dropout=0.5))
+model.add(layers.Dense(1))
+
+model.compile(optimizer=RMSprop(), loss='mae')
+history = model.fit_generator(train_gen,
+                              steps_per_epoch=500,
+                              epochs=40,
+                              validation_data=val_gen,
+                              validation_steps=val_steps)
+
+#逆向きシーケンスを用いたLSTMでの訓練と評価
+from keras.datasets import imdb
+from keras.preprocessing import sequence
+from keras import layers
+from keras.models import Sequential
+
+#特徴量として考慮する単語の数
+max_features = 10000
+
+# max_features個の最も出現頻度の高い単語のうち
+# この数の単語を残してテキストをカット
+max_len = 500
+
+#データを読み込む
+(x_train, y_train), (x_test, y_test) = \
+    imdb.load_data(num_words=max_features)
+
+#シーケンスを逆向きにする
+x_train = [x[::-1] for x in x_train]
+x_test = [x[::-1] for x in x_test]
+x_train[0]
+len(x_train)
+len(x_train[0])
+#シーケンスをパディングする
+x_train = sequence.pad_sequences(x_train, maxlen=max_len)
+x_test = sequence.pad_sequences(x_test, maxlen=max_len)
+x_train[0]
+
+x_train.shape
+
+
+#LSTMベースの双方向RNNの訓練と評価
+model = Sequential()
+model.add(layers.Embedding(max_features, 128))
+model.add(layers.LSTM(32))
+model.add(layers.Dense(1, activation='sigmoid'))
+
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+model = Sequential()
+model.add(layers.Embedding(max_features, 32))
+model.add(layers.Bidirectional(layers.LSTM(32)))
+model.add(layers.Dense(1, activation='sigmoid'))
+
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+history = model.fit(x_train, y_train,
+                    epochs=10, batch_size=128, validation_split=0.2)
+
+#GRUベースの双方向RNNの訓練と評価
+from keras.models import Sequential
+from keras import layers
+from keras.optimizers import RMSprop
+
+model = Sequential()
+model.add(layers.Bidirectional(layers.GRU(32,
+                               input_shape=(None, float_data.shape[-1]))))
+model.add(layers.Dense(1))
+model.compile(optimizer=RMSprop(), loss='mae')
+history = model.fit_generator(train_gen,
+                              steps_per_epoch=500,
+                              epochs=40,
+                              validation_data=val_gen,
+                              validation_steps=val_steps)
+
+#6.4.3 畳み込みニューラルネットワークでのシーケンス処理
+
+#IMDbデータの準備
+from keras.datasets import imdb
+from keras.preprocessing import sequence
+
+max_features = 10000 #特徴量として考慮する単語の数
+max_len = 500       #この数の単語を残してテキストをカット
+
+print('Loading data...')
+(x_train, y_train), (x_test, y_test) = \
+    imdb.load_data(num_words=max_features)
+print(len(x_train),'train sequences')
+print(len(x_test), 'test sequences')
+
+print('Pad sequences (samples x time)')
+x_train = sequence.pad_sequences(x_train, maxlen=max_len)
+x_test = sequence.pad_sequences(x_test, maxlen=max_len)
+print('x_train shape:', x_train.shape)
+print('x_test shape', x_test.shape)
+
+#IMDbデータセットでの単純な1次元CNNの訓練と評価
+from keras.models import Sequential
+from keras import layers
+from keras.optimizers import RMSprop
+
+model = Sequential()
+model.add(layers.Embedding(max_features, 128, input_length=max_len))
+model.add(layers.Conv1D(32, 7, activation='relu'))
+model.add(layers.MaxPooling1D(5))
+model.add(layers.Conv1D(32, 7, activation='relu'))
+model.add(layers.GlobalMaxPooling1D())
+model.add(layers.Dense(1))
+
+model.summary()
+model.compile(optimizer=RMSprop(lr=1e-4),
+              loss = 'binary_crossentropy',
+              metrics=['acc'])
+
+history = model.fit(x_train, y_train,
+                    epochs=10,
+                    batch_size=128,
+                    validation_split=0.2)
+
+#6.4.4 CNNとRNNを組み合わせて長いシーケンスを処理する
+
+#気象データセットでの単純な1次元CNNの訓練と評価
+from keras.models import Sequential
+from keras import layers
+from keras.optimizers import RMSprop
+
+model = Sequential()
+model.add(layers.Conv1D(32, 5, activation='relu'))
+model.add(layers.MaxPooling1D(3))
+model.add(layers.Conv1D(32, 5, activation='relu'))
+model.add(layers.GlobalMaxPooling1D())
+model.add(layers.Dense(1))
+
+model.compile(optimizer=RMSprop(), loss='mae')
+history = model.fit_generator(train_gen,
+                              steps_per_epoch=500,
+                              epochs=20,
+                              validation_data=val_gen,
+                              validation_steps=val_steps)
+
+#Jena データセット用のより分解能の高いデータジェネレータの準備
+lookback = 720
+step = 3
+delay = 144
+
+#訓練ジェネレータ
+train_gen = generator(float_data,
+                      lookback=lookback,
+                      delay=delay,
+                      min_index=0,
+                      max_index=200000,
+                      shuffle=True,
+                      step=step)
+
+val_gen = generator(float_data,
+                    lookback=lookback,
+                    delay=delay,
+                    min_index=200001,
+                    max_index=300000,
+                    step=step)
+
+test_gen = generator(float_data,
+                     lookback=lookback,
+                     delay=delay,
+                     min_index=300001,
+                     max_index=None,
+                     step=step)
+
+#検証データセット全体を調べるためにval_genから抽出するtimestepsの数
+val_steps = (300000 - 200001 - lookback) // 128
+
+#テストデータセット全体を調べるためにtest_genから抽出するtimestepsの数
+test_steps = (len(float_data) - 300001 - lookback) // 128
+
+#1次元畳み込みベーストGRU層で構成されたモデル
+from keras.models import Sequential
+from keras import layers
+from keras.optimizers import RMSprop
+
+model = Sequential()
+model.add(layers.Conv1D(32, 5, activation='relu',
+                        input_shape=(None, float_data.shape[-1])))
+model.add(layers.MaxPooling1D(3))
+model.add(layers.Conv1D(32, 5, activation='relu'))
+model.add(layers.GRU(32, dropout=0.1, recurrent_dropout=0.5))
+model.add(layers.Dense(1))
+
+model.summary()
 model.compile(optimizer=RMSprop(), loss='mae')
 history = model.fit_generator(train_gen,
                               steps_per_epoch=500,

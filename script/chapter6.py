@@ -214,7 +214,7 @@ pwd
 
 #Glove の単語埋め込みファイルを解析
 
-glove_dir = '/Users/yukihiro/Documents/Practicing-Deep-Learning-With-Keras/data/glove.6B'
+glove_dir = '/Users/yukihiro/Documents/practice/Practicing-Deep-Learning-With-Keras/data/glove.6B'
 
 embeddings_index = {}
 f = open(os.path.join(glove_dir, 'glove.6B.100d.txt'))
@@ -226,7 +226,10 @@ for line in f:
 f.close()
 
 print('Found %s word vectors.' % len(embeddings_index))
+print('Found %s vectors in \'way\' dict' % len(embeddings_index['way']))
 
+print(len(embeddings_index[]))
+embeddings_index
 #Gloveの単語埋め込み行列の準備
 embedding_dim = 100
 

@@ -1,13 +1,14 @@
 ### 181215(Mon)    
-p.246 - p.252
-chapter7.py : L1 - L108
+p.246 - p.258
+chapter7.py : L1 - L244
 ##### *Remember me*  
 Sequentialモデルだけではカバーできないものがある
 - 他入力モデル  
 -> マルチモーダル入力    
 - 他出力モデル  
 - グラフ形式のモデル   
--> 有効批准回グラフとして構造化されたネットワーク
+-> 有効批准回グラフとして構造化されたネットワーク  
+-> Inception モジュール
 -> 残差接続
 
 Functional API でできる
@@ -136,10 +137,157 @@ text = np.random.randint(1, text_vacabulary_size,
 question = np.random.randint(1, question_vocablulary_size,
                              size=(num_samples, max_length))
 
-# 答えに(整数ではなく)one-hotエンコーディングを適用
+# 答えに(整数ではなく)one-hotエンコーディングを適用(target)
 answers = np.zeros(shape=(num_samples, answer_vocabulary_size))
 indices = np.random.randint(0, answer_vocabulary_size, size=num_samples)
 for i, x in enumerate(answers):
     x[indices[i]] = 1
 
+# 入力リストを使った適合
+model.fit([text, question], answers, epochs=10, batch_size=128)
+
+# 入力ディクショナリを使った適合(入力に名前をつける場合)
+model.fit({'text': text, 'question': question}, answers,
+         epochs=10, batch_size=128)
+```
+多出力モデル  
+損失値を一つにまとめる  
+-> 損失値の総和を求める  
+-> 損失値の尺度が異なるのでそれぞれの損失値に重みを割り当てる
+```python
+# 3つの出力を持つモデルのFunctional API実装
+# 入力1 : ソーシャルメディアへの投稿
+# 出力1 : 年齢
+# 出力2 : 所得
+# 出力3 : 性別
+from keras import layers
+from keras import Input
+from keras.models import Model
+
+vocabulary_size = 50000
+num_income_groups = 10
+
+posts_input = Input(shape=(None,), dtype='int32', name='posts')
+embedded_posts = layers.Embedding(vocabulary_size, 256)(posts_input)
+x = layers.Conv1D(128, 5, activation='relu')(embedded_posts)
+x = layers.MaxPooling1D(5)(x)
+x = layers.Conv1D(256, 5, activation='relu')(x)
+x = layers.Conv1D(256, 5, activation='relu')(x)
+x = layers.MaxPooling1D(5)(x)
+x = layers.Conv1D(256, 5, activation='relu')(x)
+x = layers.Conv1D(256, 5, activation='relu')(x)
+x = layers.GlobalMaxPooling1D()(x)
+x = layers.Dense(128, activation='relu')(x)
+
+# 出力層に名前がついていることに注意
+# 出力1 : 年齢
+age_prediction = layers.Dense(1, name='age')(x)
+# 出力3 : 性別
+income_prediction = layers.Dense(num_income_groups,
+                                 activation='softmax',
+                                 name='income')(x)
+# 出力3 : 性別
+gender_prediction = layers.Dense(1, activation='sigmoid', name='gender')(x)
+model = Model(posts_input,
+              [age_prediction, income_prediction, gender_prediction])
+
+# 他出力モデルのコンパイルオプション(複数の損失)
+model.compile(optimizer='rmsprop',
+              loss=['mse',
+                    'categorical_crossentropy',
+                    'binary_crossentropy'])
+
+# 上記と同じ(出力層に名前をつけている場合のみ可能)
+model.compile(optimizer='rmsprop',
+              loss={'age': 'mse',
+                    'income': 'categorical_crossentropy',
+                    'gender': 'binary_crossentropy'})
+
+# 多出力モデルのコンパイルオプション(損失の重み付け)
+model.compile(optimizer='rmsprop',
+              loss=['mse',
+                    'categorical_crossentropy',
+                    'binary_crossentropy'],
+              loss_weights=[0.25, 1., 10.])
+
+# 上記と同じ(出力層に名前をつけている場合に飲み可能)
+model.compile(optimizer='rmsprop',
+              loss={'age': 'mse',
+                    'income': 'categorical_crossentropy',
+                    'gender': 'binary_crossentropy'},
+              loss_weights={'age': 0.25, 'income': 1, 'gender': 10.})
+
+# 多出力モデルへのデータの供給
+# age_targets, income_targets, gender_targetsはNumPy配列と仮定
+model.fit(posts, [age_targets, income_targets, gender_targets],
+          epochs=10, batch_size=64)
+
+# 上記と同じ(出力層に名前をつけている場合のみ可能)
+model.fit(posts, {'age': age_targets,
+                  'income': income_targets,
+                  'gender': gender_targets},
+          epochs=10, batch_size=64)
+
+```
+有効非巡回グラフ
+
+Inceptionモジュール  
+1 * 1 の畳込み  
+-> pw畳み込み(pointwise convolution)
+```python
+from keras import layers
+
+# 各分岐のストライドの値は同じ (2) :
+# すべての分岐の出力を同じサイズに保って連結可能にするために必要
+
+# 分岐a
+branch_a = layers.Conv2D(128, 1, activation='relu', strides=2)(x)
+
+# この分析では、空間畳み込み層でストライドが発生する
+# 分岐b
+branch_b = layers.Conv2D(128, 1, activation='relu')(x)
+branch_b = layers.Conv2D(128, 3, activation='relu', strides=2)(branch_b)
+
+# この分岐では、平均値プーリング層でストライドが発生する
+# 分岐c
+branch_c = layers.AveragePooling2D(3, strides=2)(x)
+branch_c = layers.Conv2D(128, 3, activation='relu')(branch_c)
+
+# 分岐d
+branch_d = layers.Cov2D(128, 1, activation='relu')(x)
+branch_d = layers.Conv2D(128, 3, activation='relu')(branch_d)
+branch_d = layers.Conv2D(128, 3, activation='relu', strides=2)(branch_d)
+
+# モジュールの出力を取得するために分岐の出力を結合
+output = layers.concatenate([branch_a, branch_b, branch_c, branch_d], axis=-1)
+```
+残差接続  
+手前にある層の出力を後ろにある層の入力にすることで  
+逐次的なネットワークにショートカットを作成する  
+活性化のサイズが同じであることを前提に  
+後ろにある層の活性化と合計する
+```python
+from keras import layers
+
+x = ...
+
+# xに変換を適用
+y = layers.Conv2D(128, 3, activation='relu', padding='same')(x)
+y = layers.COnv2D(128, 3, activation='relu', padding='same')(y)
+y = layers.COnv2D(128, 3, activation='relu', padding='same')(y)
+
+# 元のxを出力特徴量に追加
+y = layers.add([y, x])
+
+x = ...
+y = layers.Conv2D(128, 3, activation='relu', padding='same')(x)
+y = layers.Conv2D(128, 3, activation='relu', padding='same')(x)
+y = layers.MaxPooling2D(2, strides=2)(y)
+
+# 元のテンソルxをyと同じ形状にするための1 * 1の畳み込みを使った
+# 線形ダウンサンプリング
+residual = layers.Conv2D(128, , strides=2, padding='same')(x)
+
+# 残差テンソルを出力特徴量に追加
+y = layers.add([y, residual])
 ```

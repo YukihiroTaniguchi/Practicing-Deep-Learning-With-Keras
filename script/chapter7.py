@@ -1,20 +1,15 @@
-### 181215(Mon)    
-p.246 - p.252
-chapter7.py : L1 - L108
-##### *Remember me*  
-Sequentialモデルだけではカバーできないものがある
-- 他入力モデル  
--> マルチモーダル入力    
-- 他出力モデル  
-- グラフ形式のモデル   
--> 有効批准回グラフとして構造化されたネットワーク
--> 残差接続
-
-Functional API でできる
-
-Sequentialモデルを Functional API で実装
-```python
+# 7.1.1 速習 : Keras Functional API
 from keras import Input, layers
+
+# テンソル
+input_tensor = Input(shape=(32,))
+
+# 層は関数
+dense = layers.Dense(32, activation='relu')
+
+# テンソルで呼び出された層はテンソルを返す
+output_tensor = dense(input_tensor)
+
 from keras.models import Sequential, Model
 
 # すでにおなじみのSequentialモデル
@@ -34,30 +29,7 @@ model = Model(input_tensor, output_tensor)
 
 # このモデルのアーキテクチャを確認
 model.summary()
-_________________________________________________________________
-Layer (type)                 Output Shape              Param #   
-=================================================================
-input_2 (InputLayer)         (None, 64)                0         
-_________________________________________________________________
-dense_5 (Dense)              (None, 32)                2080      
-_________________________________________________________________
-dense_6 (Dense)              (None, 32)                1056      
-_________________________________________________________________
-dense_7 (Dense)              (None, 10)                330       
-=================================================================
-Total params: 3,466
-Trainable params: 3,466
-Non-trainable params: 0
-_________________________________________________________________
-```
 
-Keras は input_tensor から output_tensor までの間にあるそうをすべて取得し、  
-それをグラフにまとめる  
--> 中間層の情報が不要なのは output_tensor が input_tensor を  
--> 繰り返し変換することによってい取得されたものだから
-
-コンパイル、訓練、評価ステップはSequentialモデルと変わらない
-```python
 # モデルをコンパイル
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
 
@@ -71,10 +43,8 @@ model.fit(x_train, y_train, epochs=10, batch_size=128)
 
 # モデルを評価
 score = model.evaluate(x_train, y_train)
-```
 
-多入力モデル
-```python
+# 7.1.2 他入力モデル
 # 2つの入力を持つ質問応答モデルのFunctional API 実装
 # 入力1 : 質問に答えるための情報を提供するテキスト
 # 入力2 : 質問のテキスト
@@ -87,8 +57,6 @@ text_vocabulary_size = 10000
 question_vocabulary_size = 10000
 answer_vocabulary_size = 500
 
-
-# 入力1 : 質問に答えるための情報を提供するテキスト
 # テキスト入力は整数の可変長のシーケンス
 # なお、ひつようであれば、入力に名前をつけることもできる
 text_input = Input(shape=(None,), dtype='int32', name='text')
@@ -100,9 +68,6 @@ embedded_text = layers.Embedding(
 # LSTMを通じてこれらのベクトルを単一のベクトルにエンコード
 encorded_text = layers.LSTM(32)(embedded_text)
 
-
-
-# 入力2 : 質問のテキスト
 #質問入力でも(異なる層のインスタンを使って)同じプロセスを繰り返す
 question_input = Input(shape=(None, ), dtype='int32', name='question')
 embedded_question = layers.Embedding(
@@ -124,7 +89,7 @@ model.compile(optimizer='rmsprop',
               loss='categorical_crossentropy',
               metrics=['acc'])
 
-# 多入力モデルへのデータの供給
+# 他入力モデルへのデータの供給
 import numpy as np
 num_samples = 1000
 max_length = 100
@@ -141,5 +106,3 @@ answers = np.zeros(shape=(num_samples, answer_vocabulary_size))
 indices = np.random.randint(0, answer_vocabulary_size, size=num_samples)
 for i, x in enumerate(answers):
     x[indices[i]] = 1
-
-```

@@ -290,3 +290,95 @@ right_features = xception_base(right_input)
 
 # マージ後の特徴量には、右の視覚フィードと左の視覚フィードの情報が含まれている
 merged_features = layers.concatenate([left_features, right_features], axis=-1)
+
+# 7.2.1 訓練中にコールバックを使ってモデルを制御する
+
+# ModelCheckpoint コールバックと EarlyStopping コールバック
+import keras
+
+# コールバックはfitのcallbacksパラメータを通じてモデルに渡される
+# コールバックはいくつ指定してもよい
+callbacks_list = [
+    # 改善が止まったら訓練を中止
+    keras.callbacks.EarlyStopping(
+        monitor='val_acc', # 検証データでのモデルの正解率を監視
+        patience=1,        # 2エポック以上にわたって正解率が
+    ),                      # 改善しなければ訓練を中止
+    # エポックごとに現在の重みを保存
+    keras.callbacks.ModelCheckpoint(
+        filepath='others/my_model.h5', # モデルの保存先となるファイルパス
+        monitor='val_loss',     # これらの2つの引数は、val_lossが改善した場合
+        save_best_only=True,    # を覗いてモデルファイルを上書きしないこと
+    )                           # を意味する ; 改善した場合は、訓練全体
+]                               # で最も良いモデルを保持する
+
+# この場合は正解率を監視するため、
+# 正解率はモデルの指標の一部でなければならない
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+# このコールバックはval_lossとval_accを監視するため、
+# fit呼び出しにvalidation_dataを指定する必要がある
+model.fit(x y,
+         epochs=10,
+         batch_size=32,
+         callbacks=callbacks_list,
+         validation_data=(x_val, y_val))
+
+#ReduceLROnPlateau コールバック
+callbacks_list = [
+    keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss', # モデルの検証データセットでの損失値を監視
+        factor=0.1,         # コールバック餓鬼道したら学習率を10で割る
+        patience=10,        # 検証データでの損失値が10エポックにわたって
+    )                       # 改善しなかった場合はコールバックを起動
+]
+
+# このコールバックはval_lossを監視するため、
+# fit呼び出しにvalidation_dataを指定する必要がある
+model.fit(x, y,
+          epochs=10,
+          batch_size=32,
+          callbacks=callbacks_list,
+          validation_data=(x_val, y_val))
+
+# カスタムコールバックの作成
+on_epoch_begin #各エポックの最初に呼び出される
+on_epoch_end   #各エポックの最後に呼び出される
+
+on_batch_begin #各バッチを処理する直前に呼び出される
+en_batch_end   #各バッチを処理した直後に呼び出される
+
+on_train_begin #訓練の最初に呼び出される
+on_train_end   #訓練の最後に呼び出される
+
+# 単純なカスタムコールバック
+import keras
+import numpy as np
+
+class activationlogger(keras.callbacks.callbacks):
+    def set_model(self, model):
+
+        # 訓練の前に親モデルによって呼び出され
+        # 呼び出し元のモデルをコールバックに通知
+        self.model = model
+
+        layer_outputs = [layer.output for layer in model.layers]
+
+        # 各層の活性化を返すモデルインスタンス
+        self.activations_model = keras.models.model(model.input,
+                                                    layer_outputs)
+
+    def on_epoch_end(self, epoch, logs=none):
+        if self.validation_data is none:
+            raise runtimeerror('requires validation_data.')
+
+            # 検証データの最初の入力サンプルを取得
+            validation_sample = self.validation_data[0][0:1]
+            activations = self.activations_model.predict(validation_sample)
+
+            # 配列をディスクに保存
+            f = open('activations_at_epoch_' + str(epoch) + '.npz', 'w')
+            np.savez(f, activations)
+            f.close()

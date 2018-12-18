@@ -1,4 +1,4 @@
-### 181215(Mon)    
+### 181217(Mon)    
 p.246 - p.258
 chapter7.py : L1 - L244
 ##### *Remember me*  
@@ -107,7 +107,7 @@ encorded_text = layers.LSTM(32)(embedded_text)
 #質問入力でも(異なる層のインスタンを使って)同じプロセスを繰り返す
 question_input = Input(shape=(None, ), dtype='int32', name='question')
 embedded_question = layers.Embedding(
-    question_vocablulary_size, 32)(question_input)
+    question_vocabulary_size, 32)(question_input)
 encorded_question = layers.LSTM(16)(embedded_question)
 
 # エンコードされたテキストと質問を連結
@@ -120,7 +120,7 @@ answer = layers.Dense(
 
 # モデルをインスタンス化するときには、2つの入力と1つの出力を指定
 model = Model([text_input, question_input], answer)
-
+model.summary()
 model.compile(optimizer='rmsprop',
               loss='categorical_crossentropy',
               metrics=['acc'])
@@ -131,10 +131,10 @@ num_samples = 1000
 max_length = 100
 
 # ダミーのNumPyデータを生成
-text = np.random.randint(1, text_vacabulary_size,
+text = np.random.randint(1, text_vocabulary_size,
                          size=(num_samples, max_length))
 
-question = np.random.randint(1, question_vocablulary_size,
+question = np.random.randint(1, question_vocabulary_size,
                              size=(num_samples, max_length))
 
 # 答えに(整数ではなく)one-hotエンコーディングを適用(target)

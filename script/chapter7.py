@@ -353,7 +353,7 @@ en_batch_end   #各バッチを処理した直後に呼び出される
 on_train_begin #訓練の最初に呼び出される
 on_train_end   #訓練の最後に呼び出される
 
-# 単純なカスタムコールバック
+#  単純なカスタムコールバック
 import keras
 import numpy as np
 
@@ -370,15 +370,64 @@ class activationlogger(keras.callbacks.callbacks):
         self.activations_model = keras.models.model(model.input,
                                                     layer_outputs)
 
-    def on_epoch_end(self, epoch, logs=none):
+    def on_epoch_end(self, epoch, logs=None):
         if self.validation_data is none:
             raise runtimeerror('requires validation_data.')
 
             # 検証データの最初の入力サンプルを取得
-            validation_sample = self.validation_data[0][0:1]
-            activations = self.activations_model.predict(validation_sample)
+        validation_sample = self.validation_data[0][0:1]
+        activations = self.activations_model.predict(validation_sample)
 
-            # 配列をディスクに保存
-            f = open('activations_at_epoch_' + str(epoch) + '.npz', 'w')
-            np.savez(f, activations)
-            f.close()
+        # 配列をディスクに保存
+        f = open('activations_at_epoch_' + str(epoch) + '.npz', 'w')
+        np.savez(f, activations)
+        f.close()
+
+# 7.2.2 TensorBoard : TensorFLowの可視化フレームワーク
+
+#  TensorBoard で使用するためのテキスト分類モデル
+import keras
+from keras import layers
+from keras.datasets import imdb
+from keras.preprocessing import sequence
+
+max_features = 2000 # 特徴量として考慮する単語の数
+max_len = 500 # この数の単語を残してテキストをカット
+
+(x_train, y_train), (x_test, y_test) =\
+    imdb.load_data(num_words=max_features)
+
+x_train = sequence.pad_sequences(x_train, maxlen=max_len)
+x_test = sequence.pad_sequences(x_test, maxlen=max_len)
+
+model = keras.models.Sequential()
+
+model.add(layers.Embedding(max_features, 128,
+          input_length=max_len,
+          name='embed'))
+
+model.add(layers.Conv1D(32, 7, activation='relu'))
+model.add(layers.MaxPooling1D(5))
+model.add(layers.Conv1D(32, 7, activation='relu'))
+model.add(layers.GlobalMaxPool1D())
+model.add(layers.Dense(1))
+model.summary()
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=['acc'])
+
+# TensorBoardコールバックを使ってモデルを訓練
+callbacks = [
+    keras.callbacks.TensorBoard(
+        log_dir='others/my_log_dir',     # ログファイルはこの場所に書き込まれる
+        histogram_freq=1,                # 1エポックごとに活性化ヒストグラムを記録
+        embeddings_freq=1,               # 1エポックごとに埋め込みデータを記録
+        embeddings_layer_names=['embed'],
+    )
+]
+
+history = model.fit(x_train, y_train,
+                    epochs=20,
+                    batch_size=128,
+                    validation_split=0.2,
+                    callbacks=callbacks)

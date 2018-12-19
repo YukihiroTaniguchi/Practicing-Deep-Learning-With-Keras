@@ -1,15 +1,20 @@
-# 7.1.1 速習 : Keras Functional API
+#### chapter7 まとめ  
+##### Keras Functional API
+Sequentialモデルだけではカバーできないものがある
+- 他入力モデル  
+-> マルチモーダル入力    
+- 他出力モデル  
+- グラフ形式のモデル   
+-> 有効批准回グラフとして構造化されたネットワーク  
+-> Inception モジュール
+-> 残差接続
+
+Functional API でできる
+
+
+Sequentialモデルを Functional API で実装
+```python
 from keras import Input, layers
-
-# テンソル
-input_tensor = Input(shape=(32,))
-
-# 層は関数
-dense = layers.Dense(32, activation='relu')
-
-# テンソルで呼び出された層はテンソルを返す
-output_tensor = dense(input_tensor)
-
 from keras.models import Sequential, Model
 
 # すでにおなじみのSequentialモデル
@@ -29,22 +34,30 @@ model = Model(input_tensor, output_tensor)
 
 # このモデルのアーキテクチャを確認
 model.summary()
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+input_2 (InputLayer)         (None, 64)                0         
+_________________________________________________________________
+dense_5 (Dense)              (None, 32)                2080      
+_________________________________________________________________
+dense_6 (Dense)              (None, 32)                1056      
+_________________________________________________________________
+dense_7 (Dense)              (None, 10)                330       
+=================================================================
+Total params: 3,466
+Trainable params: 3,466
+Non-trainable params: 0
+_________________________________________________________________
+```
 
-# モデルをコンパイル
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
+Keras は input_tensor から output_tensor までの間にあるそうをすべて取得し、  
+それをグラフにまとめる  
+-> 中間層の情報が不要なのは output_tensor が input_tensor を  
+-> 繰り返し変換することによってい取得されたものだから
 
-# 訓練に使用するダミーのNumPyデータを生成
-import numpy as np
-x_train = np.random.random((1000, 64))
-y_train = np.random.random((1000, 10))
-
-# モデルを10エポックで訓練
-model.fit(x_train, y_train, epochs=10, batch_size=128)
-
-# モデルを評価
-score = model.evaluate(x_train, y_train)
-
-# 7.1.2 他入力モデル
+多入力モデル
+```python
 # 2つの入力を持つ質問応答モデルのFunctional API 実装
 # 入力1 : 質問に答えるための情報を提供するテキスト
 # 入力2 : 質問のテキスト
@@ -57,6 +70,7 @@ text_vocabulary_size = 10000
 question_vocabulary_size = 10000
 answer_vocabulary_size = 500
 
+
 # 入力1 : 質問に答えるための情報を提供するテキスト
 # テキスト入力は整数の可変長のシーケンス
 # なお、ひつようであれば、入力に名前をつけることもできる
@@ -68,6 +82,8 @@ embedded_text = layers.Embedding(
 
 # LSTMを通じてこれらのベクトルを単一のベクトルにエンコード
 encorded_text = layers.LSTM(32)(embedded_text)
+
+
 
 # 入力2 : 質問のテキスト
 #質問入力でも(異なる層のインスタンを使って)同じプロセスを繰り返す
@@ -86,12 +102,12 @@ answer = layers.Dense(
 
 # モデルをインスタンス化するときには、2つの入力と1つの出力を指定
 model = Model([text_input, question_input], answer)
-
+model.summary()
 model.compile(optimizer='rmsprop',
               loss='categorical_crossentropy',
               metrics=['acc'])
 
-# 他入力モデルへのデータの供給
+# 多入力モデルへのデータの供給
 import numpy as np
 num_samples = 1000
 max_length = 100
@@ -103,7 +119,7 @@ text = np.random.randint(1, text_vocabulary_size,
 question = np.random.randint(1, question_vocabulary_size,
                              size=(num_samples, max_length))
 
-# 答えに(整数ではなく)one-hotエンコーディングを適用
+# 答えに(整数ではなく)one-hotエンコーディングを適用(target)
 answers = np.zeros(shape=(num_samples, answer_vocabulary_size))
 indices = np.random.randint(0, answer_vocabulary_size, size=num_samples)
 for i, x in enumerate(answers):
@@ -115,8 +131,12 @@ model.fit([text, question], answers, epochs=10, batch_size=128)
 # 入力ディクショナリを使った適合(入力に名前をつける場合)
 model.fit({'text': text, 'question': question}, answers,
          epochs=10, batch_size=128)
-
-# 7.1.3 他出力モデル
+```
+多出力モデル  
+損失値を一つにまとめる  
+-> 損失値の総和を求める  
+-> 損失値の尺度が異なるのでそれぞれの損失値に重みを割り当てる
+```python
 # 3つの出力を持つモデルのFunctional API実装
 # 入力1 : ソーシャルメディアへの投稿
 # 出力1 : 年齢
@@ -190,8 +210,13 @@ model.fit(posts, {'age': age_targets,
                   'gender': gender_targets},
           epochs=10, batch_size=64)
 
-# 7.1.4 層の有効非巡回グラフ
-# Inception モジュール
+```
+有効非巡回グラフ
+
+Inceptionモジュール  
+1 * 1 の畳込み  
+-> pw畳み込み(pointwise convolution)
+```python
 from keras import layers
 
 # 各分岐のストライドの値は同じ (2) :
@@ -217,8 +242,14 @@ branch_d = layers.Conv2D(128, 3, activation='relu', strides=2)(branch_d)
 
 # モジュールの出力を取得するために分岐の出力を結合
 output = layers.concatenate([branch_a, branch_b, branch_c, branch_d], axis=-1)
+```
+残差接続  
+手前にある層の出力を後ろにある層の入力にすることで  
+逐次的なネットワークにショートカットを作成する  
+活性化のサイズが同じであることを前提に  
+後ろにある層の活性化と合計する
 
-# 残差接続
+```python
 from keras import layers
 
 x = ...
@@ -242,8 +273,13 @@ residual = layers.Conv2D(128, , strides=2, padding='same')(x)
 
 # 残差テンソルを出力特徴量に追加
 y = layers.add([y, residual])
+```
 
-# 7.1.5 層の重みの共有
+層の共有  
+-> 複数の分岐を共有するモデルを構築できる  
+-> Siamese LSTM or 共有LSTM と呼ばれている
+
+```python
 from keras import layers
 from keras import Input
 from keras.models import Model
@@ -271,8 +307,9 @@ predictions = layers.Dense(1, activation='sigmoid')(merged)
 # LSTM層の重みガ両方の入力に基づいて更新される
 model = Model([left_input, right_input], predictions)
 model.fit([left_data, right_data], targets)
-
-# 7.1.6 層としてのモデル
+```
+層としてモデルを使用する
+```python
 from keras import layers
 from keras import applications
 from keras import Input
@@ -290,10 +327,23 @@ right_features = xception_base(right_input)
 
 # マージ後の特徴量には、右の視覚フィードと左の視覚フィードの情報が含まれている
 merged_features = layers.concatenate([left_features, right_features], axis=-1)
+```
 
-# 7.2.1 訓練中にコールバックを使ってモデルを制御する
+##### Keras のコールバック
+コールバックを使ってモデルを制御する
 
-# ModelCheckpoint コールバックと EarlyStopping コールバック
+- モデルのチェックポイント化  
+-> 訓練中の様々な時点ででモデルの現在の重みを保存する
+- 訓練の中止  
+-> 検証データでの損失値がそれ以上改善しなくなったところで、訓練を中止する
+- 特定のパラメータの動的な調整  
+-> 訓練中のパラメータの動的な調整  
+- 訓練と検証の指標を記録  
+-> 訓練と検証の指標をログに記録するか、可視化する
+
+
+ModelCheckpoint コールバックと EarlyStopping コールバック
+```python
 import keras
 
 # コールバックはfitのcallbacksパラメータを通じてモデルに渡される
@@ -325,8 +375,10 @@ model.fit(x y,
          batch_size=32,
          callbacks=callbacks_list,
          validation_data=(x_val, y_val))
+```
 
-#ReduceLROnPlateau コールバック
+ReduceLROnPlateau コールバック
+```python
 callbacks_list = [
     keras.callbacks.ReduceLROnPlateau(
         monitor='val_loss', # モデルの検証データセットでの損失値を監視
@@ -342,8 +394,11 @@ model.fit(x, y,
           batch_size=32,
           callbacks=callbacks_list,
           validation_data=(x_val, y_val))
+```
 
-# カスタムコールバックの作成
+カスタムコールバックの作成  
+作成可能メソッド
+```python
 on_epoch_begin #各エポックの最初に呼び出される
 on_epoch_end   #各エポックの最後に呼び出される
 
@@ -352,8 +407,10 @@ en_batch_end   #各バッチを処理した直後に呼び出される
 
 on_train_begin #訓練の最初に呼び出される
 on_train_end   #訓練の最後に呼び出される
+```
 
-#  単純なカスタムコールバック
+単純なカスタムコールバック
+```python
 import keras
 import numpy as np
 
@@ -370,53 +427,38 @@ class activationlogger(keras.callbacks.callbacks):
         self.activations_model = keras.models.model(model.input,
                                                     layer_outputs)
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=none):
         if self.validation_data is none:
             raise runtimeerror('requires validation_data.')
 
             # 検証データの最初の入力サンプルを取得
-        validation_sample = self.validation_data[0][0:1]
-        activations = self.activations_model.predict(validation_sample)
+            validation_sample = self.validation_data[0][0:1]
+            activations = self.activations_model.predict(validation_sample)
 
-        # 配列をディスクに保存
-        f = open('activations_at_epoch_' + str(epoch) + '.npz', 'w')
-        np.savez(f, activations)
-        f.close()
+            # 配列をディスクに保存
+            f = open('activations_at_epoch_' + str(epoch) + '.npz', 'w')
+            np.savez(f, activations)
+            f.close()
+```
 
-# 7.2.2 TensorBoard : TensorFLowの可視化フレームワーク
+##### TensorBoard の操作
+アイデア  
+->  
+実験  
+->  
+結果  
+のループが開発
 
-#  TensorBoard で使用するためのテキスト分類モデル
-import keras
-from keras import layers
-from keras.datasets import imdb
-from keras.preprocessing import sequence
+結果からアイデアを出すには？  
+TensorBoard
+- 訓練中に指標を視覚的に監視
+- モデルのアーキテクチャの可視化
+- 活性化と勾配のヒストグラムの可視化
+- 埋め込みと勾配のヒストグラムの可視化
+- 埋め込みを3次元で調査
 
-max_features = 2000 # 特徴量として考慮する単語の数
-max_len = 500 # この数の単語を残してテキストをカット
-
-(x_train, y_train), (x_test, y_test) =\
-    imdb.load_data(num_words=max_features)
-
-x_train = sequence.pad_sequences(x_train, maxlen=max_len)
-x_test = sequence.pad_sequences(x_test, maxlen=max_len)
-
-model = keras.models.Sequential()
-
-model.add(layers.Embedding(max_features, 128,
-          input_length=max_len,
-          name='embed'))
-
-model.add(layers.Conv1D(32, 7, activation='relu'))
-model.add(layers.MaxPooling1D(5))
-model.add(layers.Conv1D(32, 7, activation='relu'))
-model.add(layers.GlobalMaxPool1D())
-model.add(layers.Dense(1))
-model.summary()
-model.compile(optimizer='rmsprop',
-              loss='binary_crossentropy',
-              metrics=['acc'])
-
-# TensorBoardコールバックを使ってモデルを訓練
+TensorBoardコールバックを使ってモデルを訓練
+```python
 callbacks = [
     keras.callbacks.TensorBoard(
         log_dir='others/my_log_dir',     # ログファイルはこの場所に書き込まれる
@@ -431,17 +473,36 @@ history = model.fit(x_train, y_train,
                     batch_size=128,
                     validation_split=0.2,
                     callbacks=callbacks)
+```
+シェルで  
+```
+$tensorboard --logdir=others/my_log_dir
+```
 
-from keras.utils import plot_model
-plot_model(model, to_file='model.png')
+HISTOGRAMSの表示
 
-from keras.utils import plot_model
-plot_model(model, shoe_shapes=True, to_file='model.png')
+PROJECTORタブ  
+埋め込み層を選択した次元のみで可視化できる
 
-# 高度なアーキテクチャパターン
+GRAPHSタブ
 
+
+
+
+##### 最先端のモデルを開発するための重要なベストプラクティス
+
+正規化  
+-> バッチ正規化
+
+BatchNormalization層
+axisパラメータはデフォルトで -1  
+data_format が channels_last の場合はそのままで  
+data_format が channels_first の場合は特徴軸は 1 であるため 1 を設定
+
+```python
 # バッチ正規化
 normalized_data = (data - np.mean(data, axis=...)) / np.std(data, axis=...)
+# 上をモジュール
 
 # 畳み込み層の後
 conv_model.add(layers.Conv2D(32, 3, activation='relu'))
@@ -450,10 +511,15 @@ conv_model.add(layers.BatchNormalization())
 # 全結合層
 dense_model.add(layers.Dense(32, activation='relu'))
 dense_model.add(layers.BatchNormalization())
+```
 
+dw畳み込み層  
+入力の空間的な位置どうしは高い相関関係にあるものの、異なるチャネルどうしはほぼ独立している と想定される場合  
+-> 入力の各チャネルで空間畳み込み演算を別々に実行した後、  
+-> pw畳み込み(1 * 1畳み込み)演算を通じて出力チャネルを連結する
+-> 限られた量のデータで小さなモデルを一から訓練する場合に有効
 
-# dw畳み込み
-
+```python
 from keras.models import Sequential, Model
 from keras import layers
 
@@ -484,6 +550,60 @@ model.summary()
 model.compile(optimizer='rmsprop',
               loss='categorical_crossentropy')
 
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+separable_conv2d_1 (Separabl (None, 62, 62, 32)        155       
+_________________________________________________________________
+separable_conv2d_2 (Separabl (None, 60, 60, 64)        2400      
+_________________________________________________________________
+max_pooling2d_1 (MaxPooling2 (None, 30, 30, 64)        0         
+_________________________________________________________________
+separable_conv2d_3 (Separabl (None, 28, 28, 64)        4736      
+_________________________________________________________________
+separable_conv2d_4 (Separabl (None, 26, 26, 128)       8896      
+_________________________________________________________________
+max_pooling2d_2 (MaxPooling2 (None, 13, 13, 128)       0         
+_________________________________________________________________
+separable_conv2d_5 (Separabl (None, 11, 11, 64)        9408      
+_________________________________________________________________
+separable_conv2d_6 (Separabl (None, 9, 9, 128)         8896      
+_________________________________________________________________
+global_average_pooling2d_1 ( (None, 128)               0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 32)                4128      
+_________________________________________________________________
+dense_3 (Dense)              (None, 10)                330       
+=================================================================
+Total params: 38,949
+Trainable params: 38,949
+Non-trainable params: 0
+_________________________________________________________________
+```
+
+ハイパーパラメータの最適化
+1. ハイパーパラメータの集まりを(自動的に)選択する
+2. 対応するモデルを構築する
+3. モデルに訓練データを学習させ、検証データで最終的な性能を測定する
+4. 次に試すハイパーパラメータの集まりを(自動的に)選択する
+5. 手順2~3を繰り返す
+6. 最後に、テストデータでモデルの性能を測定する
+
+ハイパーパラメータの更新はかなり難題
+- フィードバックを計算するには、新しいモデルを作成し、データセットでーから訓練する必要があります
+- ハイパーパラメータ空間は一般に離散的な决定で構成されており、連続的でも微分可能でもない
+
+Hyperopt
+-> Hyperas
+
+※検証データを使って計算されたフィードバックに基づいて更新されるため  
+-> 実質的にハイパーパラメータを検証データで訓練することになる  
+-> 検証データの過学習に気をつける
+
+モデルのアンサンブル
+より良い予測値を生成するために様々なモデルの予測値をプーリングする
+
+```python
 # 4種類のモデルを使って最初の予測値を計算
 pred_a = model_a.predict(x_val)
 pred_b = model_b.predict(x_val)
@@ -495,3 +615,11 @@ final_pred = 0.25 * (pred_a + pred_b + pred_c + pred_d)
 
 # これらの重み(0.5、0.25、0.1、0.15)は実験的に学習されたもの
 final_pred = 0.5 * pred_a + 0.25 * pred_b + 0.1 * pred_c + 0.15 * pred_d
+```
+できるだけ良いモデル  
+できるだけ異なるモデル  
+を使用する
+
+例 : ランダムフォレストや勾配ブースティング木とかの決定木 + ディープラーニングネットワークのアンサンブル
+
+ディープラーニングとシャローラーニングを融合した Wide and Deep カテゴリのモデル

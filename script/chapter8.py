@@ -119,3 +119,33 @@ for epoch in range(1, 60):
 
             sys.stdout.write(next_char)
             sys.stdout.flush()
+
+# 8.2.1 DeppDreamをKerasで実装する
+# 学習済みのInception V3 モデルを読み込む
+from keras.applications import inception_v3
+from keras import backend as K
+
+# ここではモデルを訓練しないため、訓練関連の演算はすべて無効にする
+K.set_learning_phase(0)
+
+# InceptionV3ネットワークを畳み込みベース無しで構築する
+# このモデルは学習済みのImageNetの重み付きで読み込まれる
+model = inception_v3.InceptionV3(weights='imagenet', include_top=False)
+
+# DeepDream の構成
+# 層の名前を係数にマッピングするディクショナリ。この係数は最大化の対象と
+# なる損失値にその層の活性化がどれくらい貢献するのかを表す。これらの層の
+# 名前は組み込みのInception V3アプリケーションにハードコーディングされて
+# いることに注意。すべての層の名前はmodel.summary()を使って確認できる
+layer_contributions = {
+    'mixed2' : 0.2,
+    'mixed3' : 3.,
+    'mixed4' : 2.,
+    'mixed5' : 1.5,
+}
+
+model.summary()
+
+# 最大化の対象となる損失値を定義
+# 層の名前を層のインスタンスにマッピングするディクションナリを作成
+layer_dict = dict([(layer.name, layer) for layer in model.layers])

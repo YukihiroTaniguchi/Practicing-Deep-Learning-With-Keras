@@ -89,7 +89,7 @@ for epoch in range(1, 60):
     print('epoch', epoch)
 
     # 1エポックでデータを学習
-    model.fix(x, y, batchsize=128, epochs=1)
+    model.fit(x, y, batch_size=128, epochs=1)
 
     # テキストシードをランダムに選択
     start_index = random.randint(0, len(text) - maxlen -1)
@@ -98,15 +98,15 @@ for epoch in range(1, 60):
 
     # ある範囲内の異なるサンプリング温度を試してみる
     for temperature in [0.2, 0.5, 1.0, 1.2]:
-        print('------ temperature:' temperature)
-        sys.stdout.write(generated_text)
+        print('------ temperature:', temperature)
+        sys.stdout.write(gererated_text)
 
         # 400文字を生成
         for i in range(400):
 
             # これまでに生成された文字にone-hotエンコーディングを適用
             sampled = np.zeros((1, maxlen, len(chars)))
-            for t, char in enumerate(generated_text):
+            for t, char in enumerate(gererated_text):
                 sampled[0, t, char_indices[char]] = 1.
 
             # 次の文字をサンプリング
@@ -114,8 +114,8 @@ for epoch in range(1, 60):
             next_index = sample(preds, temperature)
             next_char = chars[next_index]
 
-            generated_text += next_char
-            gerenrated_text = generated_text[1:]
+            gererated_text += next_char
+            gererated_text = gererated_text[1:]
 
             sys.stdout.write(next_char)
-            sys.stout.flush()
+            sys.stdout.flush()

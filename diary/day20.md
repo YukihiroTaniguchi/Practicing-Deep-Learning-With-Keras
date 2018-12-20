@@ -124,12 +124,12 @@ for epoch in range(1, 60):
 
     # テキストシードをランダムに選択
     start_index = random.randint(0, len(text) - maxlen -1)
-    gererated_text = text[start_index: start_index + maxlen]
-    print('--- Gererating with sedd: "' + gererated_text + '"')
+    generated_text = text[start_index: start_index + maxlen]
+    print('--- Gererating with sedd: "' + generated_text + '"')
 
     # ある範囲内の異なるサンプリング温度を試してみる
     for temperature in [0.2, 0.5, 1.0, 1.2]:
-        print('------ temperature:' temperature)
+        print('------ temperature:', temperature)
         sys.stdout.write(generated_text)
 
         # 400文字を生成
@@ -146,8 +146,8 @@ for epoch in range(1, 60):
             next_char = chars[next_index]
 
             generated_text += next_char
-            gerenrated_text = generated_text[1:]
+            generated_text = generated_text[1:]
 
             sys.stdout.write(next_char)
-            sys.stout.flush()
+            sys.stdout.flush()
 ```

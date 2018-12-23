@@ -1,4 +1,6 @@
+# coding:utf-8
 import numpy as np
+
 
 # 8.1.3 サンプリング戦略の重要性
 
@@ -238,16 +240,16 @@ for shape in successive_shapes:
                           step=step,
                           max_loss=max_loss)
     # 元の画像を縮小したものを拡大 : 画像が画素化される
-    upscaled_shrunk_original_img = resize_img(shrunk_original_img, shape)
+    upscaled_shrunk_original_img = resize_img(shrunk_original_img, shape)
     # このサイズでの元の画像の高品質バージョンを計算
-    same_size_original = resize_img(original_img, shape)
+    same_size_original = resize_img(original_img, shape)
     # これらの2つの差分が、拡大時に失われるディテールの量
-    lost_detail = same_size_original - upscaled_shrunk_original_img
+    lost_detail = same_size_original - upscaled_shrunk_original_img
     #  失われたディテールをドリーム画像に再注入
-    img += lost_detail
-    shrunk_original_img = resize_img(original_img, shape)
-    save_img(img, fname='dream_at_scale_' + str(shape) + '.png')
-save_img(img, fname='final_dream.png')
+    img += lost_detail
+    shrunk_original_img = resize_img(original_img, shape)
+    save_img(img, fname='dream_at_scale_' + str(sahpe) + '.png')
+save_img(img, fname='final_dream.png')
 
 # 補助関数
 import scipy
@@ -601,8 +603,8 @@ figure = np.zeros((digit_size * n, digit_size * n))
 grid_x = norm.ppf(np.linspace(0.05, 0.95, n))
 grid_y = norm.ppf(np.llisapce(0.05, 0.95, n))
 
-for i, yi enumerate(grid_x):
-    for j, xi in enumerate(grid_y):
+for i, yi (grid_x):
+    for j, xi in enumerate(grdi_y):
         z_sample = np.array([[xi, yi]])
         # 完全なバッチを形成するためにzを複数回繰り返す
         z_sample = np.tile(z_sample, batch_size).reshape(batch_size, 2)

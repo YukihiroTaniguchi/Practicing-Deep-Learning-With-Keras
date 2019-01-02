@@ -1,6 +1,6 @@
 # coding:utf-8
-import numpy as np
 
+import numpy as np
 
 # 8.1.3 サンプリング戦略の重要性
 
@@ -370,12 +370,11 @@ def style_loss(style, combination):
 
 # 過度の画素化を防ぐ正則化のための全変動損失関数
 def total_variation_loss(x):
-    a = K.square(x[:, :img_height - 1, :img_width - 1, :] -
-                 x[:, 1:, :img_width - 1, :])
-    b = K.square(x[:, :img_height - 1, :img_width - 1, :] -
-                 x[:, :img_height - 1, 1:, :])
+    a = K.square(x[:, :img_height - 1, :img_width - 1, :]
+               - x[:, 1:, :img_width - 1, :])
+    b = K.square(x[:, :img_height - 1, :img_width - 1, :]
+               - x[:, :img_height - 1, 1:, :])
     return K.sum(K.pow(a + b, 1.25))
-
 
 # 最小化の対象となる最終的な損失関数を定義
 # 層の名前を活性化テンソルにマッピングするディクショナリ
@@ -603,7 +602,7 @@ figure = np.zeros((digit_size * n, digit_size * n))
 grid_x = norm.ppf(np.linspace(0.05, 0.95, n))
 grid_y = norm.ppf(np.llisapce(0.05, 0.95, n))
 
-for i, yi (grid_x):
+for i, yi in (grid_x):
     for j, xi in enumerate(grdi_y):
         z_sample = np.array([[xi, yi]])
         # 完全なバッチを形成するためにzを複数回繰り返す
@@ -676,7 +675,7 @@ x = layers.Dropout(0.4)(x)
 x = layers.Dense(1, activation='sigmoid')(x)
 
 # discriminatorモデルをインスタンス化
-形状が(32, 32, 3)の入力で二値分類(fake/reak)を実行
+# 形状が(32, 32, 3)の入力で二値分類(fake/reak)を実行
 discriminator = keras.models.Model(discriminator_input, x)
 discriminator.summary()
 
